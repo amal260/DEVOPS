@@ -10,7 +10,7 @@ service:
   port: 4000
 
 env:
-  MONGO_URI: "mongodb://bouhmid:bouhmid@mongo:27017/crud?authSource=admin"
+  MONGO_URI: "mongodb://amal:amal@mongo:27017/crud?authSource=admin"
   PORT: "4000"
 
 ingress:

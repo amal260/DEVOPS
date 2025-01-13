@@ -2,72 +2,38 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        IMAGE_NAME_FRONTEND = 'amal761/frontend'
-        IMAGE_NAME_BACKEND = 'amal761/backend'
+        BACKEND_IMAGE = 'amal761/backend:latest'
+        FRONTEND_IMAGE = 'amal761/frontend:latest'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', 
-                    url: 'git@your-repo-url.git', 
-                    credentialsId: 'Gitlab_ssh'
+                echo 'Cloning repository'
+                git branch: 'main', url: 'https://github.com/amal260/DEVOPS.git'
             }
         }
 
-        stage('Build Frontend Image') {
+        stage('Build Docker Images') {
             steps {
-                dir('frontend') {
-                    script {
-                        dockerImageFrontend = docker.build("${IMAGE_NAME_FRONTEND}")
-                    }
-                }
+                echo 'Building Docker images for backend and frontend'
+                sh """
+                    docker build -t $BACKEND_IMAGE -f ./product-management-main/backend/Dockerfile ./product-management-main/backend
+                    docker build -t $FRONTEND_IMAGE -f ./product-management-main/frontend/Dockerfile ./product-management-main/frontend
+                """
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Push Docker Images') {
             steps {
-                dir('backend') {
-                    script {
-                        dockerImageBackend = docker.build("${IMAGE_NAME_BACKEND}")
-                    }
-                }
-            }
-        }
-
-        stage('Scan Frontend Image') {
-            steps {
+                echo 'Pushing Docker images to Docker Hub'
                 script {
-                    sh """
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                        aquasec/trivy:latest image --exit-code 0 \
-                        --severity LOW,MEDIUM,HIGH,CRITICAL \
-                        ${IMAGE_NAME_FRONTEND}
-                    """
-                }
-            }
-        }
-
-        stage('Scan Backend Image') {
-            steps {
-                script {
-                    sh """
-                    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                        aquasec/trivy:latest image --exit-code 0 \
-                        --severity LOW,MEDIUM,HIGH,CRITICAL \
-                        ${IMAGE_NAME_BACKEND}
-                    """
-                }
-            }
-        }
-
-        stage('Push Images to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('', "${DOCKERHUB_CREDENTIALS}") {
-                        dockerImageFrontend.push()
-                        dockerImageBackend.push()
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                            docker push $BACKEND_IMAGE
+                            docker push $FRONTEND_IMAGE
+                        """
                     }
                 }
             }
