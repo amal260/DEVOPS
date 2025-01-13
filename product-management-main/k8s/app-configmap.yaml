@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-configmap
+data:
+  MONGO_URI: "mongodb://amal:amal@mongo:27017/crud?authSource=admin"
+  REACT_APP_SERVER_URL: http://backend-service:4000
+  PORT: "4000"
